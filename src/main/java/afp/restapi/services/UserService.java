@@ -13,6 +13,7 @@ import afp.restapi.models.Users;
 import afp.restapi.repositories.UserRepo;
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import at.favre.lib.crypto.bcrypt.BCrypt.Version;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -21,6 +22,8 @@ public class UserService {
     
     private final UserRepo USERREPO;
     private final BCrypt.Hasher HASHALG = BCrypt.with(Version.VERSION_2Y);
+
+    private List<String> sessionList = new ArrayList<>();
 
     public UserService(UserRepo USERREPO){
         this.USERREPO = USERREPO;
@@ -40,7 +43,22 @@ public class UserService {
     }
 
     public Users updateUser(Users user){
+        Optional<Users> userDB = USERREPO.findById(user.getUserId());
+        user.setPassword(userDB.get().getPassword());
         return USERREPO.save(user);
+    }
+
+    public String updatePassword(Long userID, String passwordOld, String passwordNew){
+        Optional<Users> userDb = USERREPO.findById(userID);
+
+        if(!userDb.isEmpty()){
+            if (BCrypt.verifyer().verify(passwordOld.toCharArray(), userDb.get().getPassword()).verified) {                USERREPO.updatePassword(HASHALG.hashToString(6, passwordNew.toCharArray()), userID);
+                return "Your new Password is sets";
+            }else{
+                return "Your password is incorrect";
+            }
+        }
+        return "Error (╯°□°）╯︵ ┻━┻";
     }
 
     public void deleteUser(Users user){
@@ -69,7 +87,9 @@ public class UserService {
         return filteredList;
     }
 
-    public Boolean logIn(String password, String email){
+    public Boolean logIn(String password, String email, HttpServletRequest request){
+        
+        sessionList = (List<String>) request.getSession().getAttribute("USER_SESSION");
         Optional<Users> userDb = USERREPO.logIn(email);
 
         if(userDb.isEmpty() == true){
@@ -77,6 +97,16 @@ public class UserService {
         }
         
         if(BCrypt.verifyer().verify(password.toCharArray(), userDb.get().getPassword()).verified){
+            if (sessionList == null) {
+                sessionList = new ArrayList<>();
+                request.getSession().setAttribute("USER_SESSION", sessionList);
+            }
+            if (!sessionList.contains(userDb.get().getEmail())) {
+                sessionList.add(userDb.get().getEmail());
+            }
+            
+            request.getSession().setAttribute("USER_SESSION", sessionList);
+            System.out.println(request.getSession().getAttribute("USER_SESSION"));
             return true;
         }
         return false;

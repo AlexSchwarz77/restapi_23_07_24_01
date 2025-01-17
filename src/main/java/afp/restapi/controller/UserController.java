@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import afp.restapi.models.IUsers;
 import afp.restapi.models.Users;
 import afp.restapi.services.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RequestMapping(path="/v1")
 @RestController
@@ -62,8 +63,8 @@ public class UserController {
     }
 
     @PostMapping(path = "/user/login")
-    private ResponseEntity<Boolean> logIn(@RequestBody Map<String, String> login){
-        return new ResponseEntity<>(USERSERVICE.logIn(login.get("password"), login.get("email")), HttpStatus.OK);
+    private ResponseEntity<Boolean> logIn(@RequestBody Map<String, String> login, HttpServletRequest request){
+        return new ResponseEntity<>(USERSERVICE.logIn(login.get("password"), login.get("email"), request), HttpStatus.OK);
     }
 
     @GetMapping(value = "/miniuser/{email}")
